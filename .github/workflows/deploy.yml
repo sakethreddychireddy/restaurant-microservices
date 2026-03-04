@@ -11,37 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 — Checkout code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2 — Setup .NET 8
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # Step 3 — Restore dependencies
       - name: Restore Dependencies
         run: dotnet restore Restaurant.sln
 
-      # Step 4 — Build solution
       - name: Build Solution
         run: dotnet build Restaurant.sln --no-restore --configuration Release
 
-      # Step 5 — Setup SSH
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      # Step 6 — Deploy to Server
       - name: Deploy to Server
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
-
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
             echo "📦 Pulling latest code..."
             cd ~/restaurant-microservices
             git pull origin main
@@ -79,12 +69,10 @@ jobs:
             "
 
             echo "✅ Deployment complete!"
-          '
 
-      # Step 7 — Notify Success
       - name: Deployment Success
         run: |
-          echo "✅ Successfully deployed to server!"
+          echo "✅ Successfully deployed!"
           echo "Auth Service:  http://${{ secrets.SERVER_IP }}:5270/swagger"
           echo "Menu Service:  http://${{ secrets.SERVER_IP }}:5271/swagger"
           echo "Order Service: http://${{ secrets.SERVER_IP }}:5272/swagger"
