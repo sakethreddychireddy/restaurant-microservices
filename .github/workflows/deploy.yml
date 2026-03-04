@@ -1,0 +1,90 @@
+﻿name: Deploy Restaurant Microservices
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 — Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2 — Setup .NET 8
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Step 3 — Restore dependencies
+      - name: Restore Dependencies
+        run: dotnet restore Restaurant.sln
+
+      # Step 4 — Build solution
+      - name: Build Solution
+        run: dotnet build Restaurant.sln --no-restore --configuration Release
+
+      # Step 5 — Setup SSH
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # Step 6 — Deploy to Server
+      - name: Deploy to Server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
+
+            echo "📦 Pulling latest code..."
+            cd ~/restaurant-microservices
+            git pull origin main
+
+            echo "🔨 Building solution..."
+            dotnet build Restaurant.sln --configuration Release
+
+            echo "🛑 Stopping existing services..."
+            screen -r auth -X quit 2>/dev/null || true
+            screen -r menu -X quit 2>/dev/null || true
+            screen -r order -X quit 2>/dev/null || true
+            sleep 3
+
+            echo "🚀 Starting Auth Service..."
+            screen -dmS auth bash -c "
+              cd ~/restaurant-microservices/AuthService.API
+              set -a && source .env && set +a
+              dotnet run --configuration Release
+            "
+            sleep 5
+
+            echo "🚀 Starting Menu Service..."
+            screen -dmS menu bash -c "
+              cd ~/restaurant-microservices/MenuService.API
+              set -a && source .env && set +a
+              dotnet run --configuration Release
+            "
+            sleep 5
+
+            echo "🚀 Starting Order Service..."
+            screen -dmS order bash -c "
+              cd ~/restaurant-microservices/OrderService.API
+              set -a && source .env && set +a
+              dotnet run --configuration Release
+            "
+
+            echo "✅ Deployment complete!"
+          '
+
+      # Step 7 — Notify Success
+      - name: Deployment Success
+        run: |
+          echo "✅ Successfully deployed to server!"
+          echo "Auth Service:  http://${{ secrets.SERVER_IP }}:5270/swagger"
+          echo "Menu Service:  http://${{ secrets.SERVER_IP }}:5271/swagger"
+          echo "Order Service: http://${{ secrets.SERVER_IP }}:5272/swagger"
