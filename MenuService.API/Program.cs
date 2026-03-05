@@ -67,7 +67,14 @@ builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<IValidator<CreateMenuItemDto>, CreateMenuItemValidator>();
 builder.Services.AddScoped<IValidator<UpdateMenuItemDto>, UpdateMenuItemValidator>();
 
-builder.Services.AddGrpc();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    policy.WithOrigins("http://localhost:3000","http://localhost:5173") // React app URL
+          .AllowAnyHeader()
+          .AllowAnyMethod()
+    );
+});
 
 var app = builder.Build();
 
@@ -77,6 +84,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseCors("AllowFrontend");
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
