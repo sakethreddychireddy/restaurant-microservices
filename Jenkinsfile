@@ -23,83 +23,97 @@ pipeline {
             }
         }
 
+        stage('Publish') {
+            steps {
+                echo '📦 Publishing services...'
+                sh '''
+                    dotnet publish AuthService.API/AuthService.API.csproj -c Release -o /home/saketh/publish/auth
+                    dotnet publish MenuService.API/MenuService.API.csproj -c Release -o /home/saketh/publish/menu
+                    dotnet publish OrderService.API/OrderService.API.csproj -c Release -o /home/saketh/publish/order
+                '''
+            }
+        }
+
         stage('Stop Services') {
             steps {
                 echo '🛑 Stopping existing services...'
                 sh '''
-                    [ -f $WORKSPACE/AuthService.API/auth.pid ] && kill $(cat $WORKSPACE/AuthService.API/auth.pid) 2>/dev/null || true
-                    [ -f $WORKSPACE/MenuService.API/menu.pid ] && kill $(cat $WORKSPACE/MenuService.API/menu.pid) 2>/dev/null || true
-                    [ -f $WORKSPACE/OrderService.API/order.pid ] && kill $(cat $WORKSPACE/OrderService.API/order.pid) 2>/dev/null || true
+                    [ -f /home/saketh/pids/auth.pid ] && kill $(cat /home/saketh/pids/auth.pid) 2>/dev/null || true
+                    [ -f /home/saketh/pids/menu.pid ] && kill $(cat /home/saketh/pids/menu.pid) 2>/dev/null || true
+                    [ -f /home/saketh/pids/order.pid ] && kill $(cat /home/saketh/pids/order.pid) 2>/dev/null || true
                     sleep 3
                 '''
             }
         }
 
-stage('Deploy Auth Service') {
-    steps {
-        echo '🚀 Starting Auth Service...'
-        sh '''#!/bin/bash
-            cd $WORKSPACE/AuthService.API
-            set -a && . .env && set +a
-            nohup dotnet run --configuration Release > auth.log 2>&1 &
-            AUTH_PID=$!
-            echo $AUTH_PID > auth.pid
-            echo "Auth Service started with PID: $AUTH_PID"
-            sleep 8
-            if kill -0 $AUTH_PID 2>/dev/null; then
-                echo "✅ Auth Service is running"
-            else
-                echo "❌ Auth Service failed to start"
-                cat auth.log
-                exit 1
-            fi
-        '''
-    }
-}
+        stage('Deploy Auth Service') {
+            steps {
+                echo '🚀 Starting Auth Service...'
+                sh '''#!/bin/bash
+                    mkdir -p /home/saketh/pids
+                    mkdir -p /home/saketh/logs
+                    cp /home/saketh/.jenkins/workspace/restaurant/AuthService.API/.env /home/saketh/publish/auth/.env
+                    cd /home/saketh/publish/auth
+                    set -a && . .env && set +a
+                    nohup dotnet AuthService.API.dll > /home/saketh/logs/auth.log 2>&1 &
+                    echo $! > /home/saketh/pids/auth.pid
+                    sleep 8
+                    if kill -0 $(cat /home/saketh/pids/auth.pid) 2>/dev/null; then
+                        echo "✅ Auth Service is running"
+                    else
+                        echo "❌ Auth Service failed"
+                        cat /home/saketh/logs/auth.log
+                        exit 1
+                    fi
+                '''
+            }
+        }
 
-stage('Deploy Menu Service') {
-    steps {
-        echo '🚀 Starting Menu Service...'
-        sh '''#!/bin/bash
-            cd $WORKSPACE/MenuService.API
-            set -a && . .env && set +a
-            nohup dotnet run --configuration Release > menu.log 2>&1 &
-            MENU_PID=$!
-            echo $MENU_PID > menu.pid
-            echo "Menu Service started with PID: $MENU_PID"
-            sleep 8
-            if kill -0 $MENU_PID 2>/dev/null; then
-                echo "✅ Menu Service is running"
-            else
-                echo "❌ Menu Service failed to start"
-                cat menu.log
-                exit 1
-            fi
-        '''
-    }
-}
+        stage('Deploy Menu Service') {
+            steps {
+                echo '🚀 Starting Menu Service...'
+                sh '''#!/bin/bash
+                    mkdir -p /home/saketh/pids
+                    mkdir -p /home/saketh/logs
+                    cp /home/saketh/.jenkins/workspace/restaurant/MenuService.API/.env /home/saketh/publish/menu/.env
+                    cd /home/saketh/publish/menu
+                    set -a && . .env && set +a
+                    nohup dotnet MenuService.API.dll > /home/saketh/logs/menu.log 2>&1 &
+                    echo $! > /home/saketh/pids/menu.pid
+                    sleep 8
+                    if kill -0 $(cat /home/saketh/pids/menu.pid) 2>/dev/null; then
+                        echo "✅ Menu Service is running"
+                    else
+                        echo "❌ Menu Service failed"
+                        cat /home/saketh/logs/menu.log
+                        exit 1
+                    fi
+                '''
+            }
+        }
 
-stage('Deploy Order Service') {
-    steps {
-        echo '🚀 Starting Order Service...'
-        sh '''#!/bin/bash
-            cd $WORKSPACE/OrderService.API
-            set -a && . .env && set +a
-            nohup dotnet run --configuration Release > order.log 2>&1 &
-            ORDER_PID=$!
-            echo $ORDER_PID > order.pid
-            echo "Order Service started with PID: $ORDER_PID"
-            sleep 8
-            if kill -0 $ORDER_PID 2>/dev/null; then
-                echo "✅ Order Service is running"
-            else
-                echo "❌ Order Service failed to start"
-                cat order.log
-                exit 1
-            fi
-        '''
-    }
-}
+        stage('Deploy Order Service') {
+            steps {
+                echo '🚀 Starting Order Service...'
+                sh '''#!/bin/bash
+                    mkdir -p /home/saketh/pids
+                    mkdir -p /home/saketh/logs
+                    cp /home/saketh/.jenkins/workspace/restaurant/OrderService.API/.env /home/saketh/publish/order/.env
+                    cd /home/saketh/publish/order
+                    set -a && . .env && set +a
+                    nohup dotnet OrderService.API.dll > /home/saketh/logs/order.log 2>&1 &
+                    echo $! > /home/saketh/pids/order.pid
+                    sleep 8
+                    if kill -0 $(cat /home/saketh/pids/order.pid) 2>/dev/null; then
+                        echo "✅ Order Service is running"
+                    else
+                        echo "❌ Order Service failed"
+                        cat /home/saketh/logs/order.log
+                        exit 1
+                    fi
+                '''
+            }
+        }
 
         stage('Done') {
             steps {
@@ -113,10 +127,7 @@ stage('Deploy Order Service') {
             echo '✅ Pipeline succeeded!'
         }
         failure {
-            echo '❌ Pipeline failed!'
+            echo '❌ Pipeline failed! Check logs above.'
         }
     }
 }
-
-
-
