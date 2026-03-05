@@ -38,9 +38,9 @@ pipeline {
 stage('Deploy Auth Service') {
     steps {
         echo '🚀 Starting Auth Service...'
-        sh '''
+        sh '''#!/bin/bash
             cd $WORKSPACE/AuthService.API
-            set -a && source .env && set +a
+            set -a && . .env && set +a
             nohup dotnet run --configuration Release > auth.log 2>&1 &
             AUTH_PID=$!
             echo $AUTH_PID > auth.pid
@@ -60,9 +60,9 @@ stage('Deploy Auth Service') {
 stage('Deploy Menu Service') {
     steps {
         echo '🚀 Starting Menu Service...'
-        sh '''
+        sh '''#!/bin/bash
             cd $WORKSPACE/MenuService.API
-            set -a && source .env && set +a
+            set -a && . .env && set +a
             nohup dotnet run --configuration Release > menu.log 2>&1 &
             MENU_PID=$!
             echo $MENU_PID > menu.pid
@@ -82,9 +82,9 @@ stage('Deploy Menu Service') {
 stage('Deploy Order Service') {
     steps {
         echo '🚀 Starting Order Service...'
-        sh '''
+        sh '''#!/bin/bash
             cd $WORKSPACE/OrderService.API
-            set -a && source .env && set +a
+            set -a && . .env && set +a
             nohup dotnet run --configuration Release > order.log 2>&1 &
             ORDER_PID=$!
             echo $ORDER_PID > order.pid
@@ -117,5 +117,6 @@ stage('Deploy Order Service') {
         }
     }
 }
+
 
 
