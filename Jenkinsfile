@@ -35,44 +35,50 @@ pipeline {
             }
         }
 
-        stage('Deploy Auth Service') {
-            steps {
-                echo '🚀 Starting Auth Service...'
-                sh '''
-                    cd $WORKSPACE/AuthService.API
-                    set -a && source .env && set +a
-                    nohup dotnet run --configuration Release > auth.log 2>&1 &
-                    echo $! > auth.pid
-                    sleep 5
-                '''
-            }
-        }
+   stage('Deploy Auth Service') {
+    steps {
+        echo '🚀 Starting Auth Service...'
+        sh '''
+            cd $WORKSPACE/AuthService.API
+            set -a && source .env && set +a
+            nohup dotnet run --configuration Release > auth.log 2>&1 </dev/null &
+            disown $!
+            echo $! > auth.pid
+            sleep 5
+            echo "Auth Service PID: $(cat auth.pid)"
+        '''
+    }
+}
 
-        stage('Deploy Menu Service') {
-            steps {
-                echo '🚀 Starting Menu Service...'
-                sh '''
-                    cd $WORKSPACE/MenuService.API
-                    set -a && source .env && set +a
-                    nohup dotnet run --configuration Release > menu.log 2>&1 &
-                    echo $! > menu.pid
-                    sleep 5
-                '''
-            }
-        }
+stage('Deploy Menu Service') {
+    steps {
+        echo '🚀 Starting Menu Service...'
+        sh '''
+            cd $WORKSPACE/MenuService.API
+            set -a && source .env && set +a
+            nohup dotnet run --configuration Release > menu.log 2>&1 </dev/null &
+            disown $!
+            echo $! > menu.pid
+            sleep 5
+            echo "Menu Service PID: $(cat menu.pid)"
+        '''
+    }
+}
 
-        stage('Deploy Order Service') {
-            steps {
-                echo '🚀 Starting Order Service...'
-                sh '''
-                    cd $WORKSPACE/OrderService.API
-                    set -a && source .env && set +a
-                    nohup dotnet run --configuration Release > order.log 2>&1 &
-                    echo $! > order.pid
-                    sleep 5
-                '''
-            }
-        }
+stage('Deploy Order Service') {
+    steps {
+        echo '🚀 Starting Order Service...'
+        sh '''
+            cd $WORKSPACE/OrderService.API
+            set -a && source .env && set +a
+            nohup dotnet run --configuration Release > order.log 2>&1 </dev/null &
+            disown $!
+            echo $! > order.pid
+            sleep 5
+            echo "Order Service PID: $(cat order.pid)"
+        '''
+    }
+}
 
         stage('Done') {
             steps {
@@ -90,3 +96,4 @@ pipeline {
         }
     }
 }
+
