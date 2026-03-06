@@ -71,10 +71,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<OrderService.Application.Services.OrderService>();
 builder.Services.AddScoped<IValidator<CreateOrderDto>, CreateOrderValidator>();
 // Cors configuration (allowing frontend to call API)
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
     );

@@ -66,11 +66,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<IValidator<CreateMenuItemDto>, CreateMenuItemValidator>();
 builder.Services.AddScoped<IValidator<UpdateMenuItemDto>, UpdateMenuItemValidator>();
+// CORS configuration to allow requests from the React frontend
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-    policy.WithOrigins("http://localhost:3000","http://localhost:5173") // React app URL
+    policy.WithOrigins(allowedOrigins) // React app URL
           .AllowAnyHeader()
           .AllowAnyMethod()
     );
