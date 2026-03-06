@@ -97,7 +97,7 @@ namespace OrderService.Application.Services
             var order = await _repository.GetByIdAsync(id, ct)
                 ?? throw new OrderNotFoundException(id);
 
-            order.UpdateStatus(dto.Status);
+            order.UpdateStatus(dto.status);
             await _repository.UpdateAsync(order, ct);
 
             // Publish status changed event
@@ -105,7 +105,7 @@ namespace OrderService.Application.Services
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
-                NewStatus = dto.Status.ToString(),
+                NewStatus = dto.status.ToString(),
                 ChangedAt = order.UpdatedAt
             }, ct);
 
