@@ -2,5 +2,5 @@
 
 namespace OrderService.Application.DTOs
 {
-    public record UpdateOrderStatusDto(OrderStatus status);
+    public record UpdateOrderStatusDto(OrderStatus Status);
 }
