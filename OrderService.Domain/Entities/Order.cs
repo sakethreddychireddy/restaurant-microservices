@@ -6,6 +6,8 @@ namespace OrderService.Domain.Entities
     {
         public Guid Id { get; private set; }
         public Guid UserId { get; private set; }
+        public string UserEmail { get; private set; } = string.Empty;
+        public string UserName { get; private set; } = string.Empty;
         public string DeliveryAddress { get; private set; } = string.Empty;
         public OrderStatus Status { get; private set; } = OrderStatus.Pending;
         public decimal TotalPrice { get; private set; }
@@ -17,7 +19,12 @@ namespace OrderService.Domain.Entities
 
         private Order() { }
 
-        public static Order Create(Guid userId, string deliveryAddress, List<OrderItem> items)
+        public static Order Create(
+            Guid userId,
+            string userEmail,
+            string userName,
+            string deliveryAddress,
+            List<OrderItem> items)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(deliveryAddress);
             if (items == null || items.Count == 0)
@@ -27,6 +34,8 @@ namespace OrderService.Domain.Entities
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
+                UserEmail = userEmail,
+                UserName = userName,
                 DeliveryAddress = deliveryAddress,
                 Status = OrderStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
@@ -48,7 +57,6 @@ namespace OrderService.Domain.Entities
         {
             if (Status == OrderStatus.Delivered)
                 throw new InvalidOperationException("Cannot cancel a delivered order.");
-
             Status = OrderStatus.Cancelled;
             UpdatedAt = DateTime.UtcNow;
         }

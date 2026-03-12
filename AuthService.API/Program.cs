@@ -1,4 +1,4 @@
-using AuthService.API.Middleware;
+﻿using AuthService.API.Middleware;
 using AuthService.Application;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
@@ -12,11 +12,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-// JWT Authentication configuration
+
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+
+// ── Authentication — JWT + OAuth ──────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -26,12 +27,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
-        // ClockSkew = TimeSpan.Zero
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
+        options.CallbackPath = "/api/auth/google/callback";
+        options.SaveTokens = true;
+    })
+    .AddGitHub(options =>
+    {
+        options.ClientId = builder.Configuration["OAuth:GitHub:ClientId"]!;
+        options.ClientSecret = builder.Configuration["OAuth:GitHub:ClientSecret"]!;
+        options.CallbackPath = "/api/auth/github/callback";
+        options.Scope.Add("user:email");
+        options.SaveTokens = true;
     });
+
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Swagger — same as before
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthService API", Version = "v1" });
@@ -51,14 +70,15 @@ builder.Services.AddSwaggerGen(c =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer" 
+                    Id   = "Bearer"
                 }
-            }
-            , Array.Empty<string>()
+            },
+            Array.Empty<string>()
         }
-    });    
+    });
 });
-// CORS configuration
+
+// CORS
 var allowedOrigins = builder.Configuration
     .GetSection("AllowedOrigins")
     .Get<string[]>() ?? Array.Empty<string>();
@@ -68,36 +88,32 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod()
-    );
+              .AllowAnyMethod());
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
 app.UseCors("AllowFrontend");
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
-//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-// Migrate and seed database
+
+// Migrate and seed
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     db.Database.Migrate();
-    if(!db.Users.Any())
+    if (!db.Users.Any())
     {
-        db.Users.Add(User.Create("Admin", "admin@ember.com",BCrypt.Net.BCrypt.HashPassword("Admin123!"), "Admin"));
+        db.Users.Add(User.Create(
+            "Admin", "admin@ember.com",
+            BCrypt.Net.BCrypt.HashPassword("Admin123!"), "Admin"));
         await db.SaveChangesAsync();
     }
 }
+
 app.Run();

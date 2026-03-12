@@ -1,4 +1,5 @@
 ﻿using AuthService.Domain.Interfaces;
+using AuthService.Infrastructure.Auth;
 using AuthService.Infrastructure.Identity;
 using AuthService.Infrastructure.Persistence;
 using AuthService.Infrastructure.Repositories;
@@ -17,6 +18,8 @@ namespace AuthService.Infrastructure
                 services.AddScoped<IUserRepository, UserRepository>();
                 services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
                 services.AddScoped<ITokenService, JwtTokenService>();
+                services.AddMemoryCache();
+                services.AddSingleton<IOAuthCodeStore, InMemoryOAuthCodeStore>();
                 return services;
             }
     }

@@ -3,7 +3,7 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Infrastructure.Messaging.Events;
+using OrderService.Application.Events;
 
 namespace OrderService.Application.Services
 {
@@ -23,16 +23,18 @@ namespace OrderService.Application.Services
             _validator = validator;
         }
 
-        public async Task<OrderResponseDto> CreateAsync(CreateOrderDto dto,
-            Guid userId, CancellationToken ct = default)
+        public async Task<OrderResponseDto> CreateAsync(
+            CreateOrderDto dto,
+            Guid userId,
+            string userEmail,
+            string userName,
+            CancellationToken ct = default)
         {
             await _validator.ValidateAndThrowAsync(dto, ct);
 
-            // Validate menu items via gRPC
             var menuItemIds = dto.Items.Select(i => i.MenuItemId);
             var menuItems = (await _menuClient.GetMenuItemsAsync(menuItemIds, ct)).ToList();
 
-            // Check all items exist and are available
             foreach (var requested in dto.Items)
             {
                 var menuItem = menuItems.FirstOrDefault(m => m.Id == requested.MenuItemId)
@@ -44,7 +46,6 @@ namespace OrderService.Application.Services
                         $"Menu item '{menuItem.Name}' is currently unavailable.");
             }
 
-            // Build order items using real prices from Menu Service
             var orderId = Guid.NewGuid();
             var orderItems = dto.Items.Select(i =>
             {
@@ -52,15 +53,16 @@ namespace OrderService.Application.Services
                 return OrderItem.Create(orderId, i.MenuItemId, menuItem.Name, menuItem.Price, i.Quantity);
             }).ToList();
 
-            var order = Order.Create(userId, dto.DeliveryAddress, orderItems);
-
+            var order = Order.Create(userId, userEmail, userName, dto.DeliveryAddress, orderItems);
             await _repository.AddAsync(order, ct);
 
-            // Publish OrderPlaced event to RabbitMQ
+            // Publish with user info
             await _publisher.PublishAsync(new OrderPlacedEvent
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
+                UserEmail = userEmail,
+                UserName = userName,
                 TotalPrice = order.TotalPrice,
                 DeliveryAddress = order.DeliveryAddress,
                 Items = orderItems.Select(i => new OrderPlacedEvent.OrderItemInfo(
@@ -71,7 +73,8 @@ namespace OrderService.Application.Services
             return ToResponse(order);
         }
 
-        public async Task<OrderResponseDto> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public async Task<OrderResponseDto> GetByIdAsync(
+            Guid id, CancellationToken ct = default)
         {
             var order = await _repository.GetByIdAsync(id, ct)
                 ?? throw new OrderNotFoundException(id);
@@ -85,26 +88,31 @@ namespace OrderService.Application.Services
             return orders.Select(ToResponse);
         }
 
-        public async Task<IEnumerable<OrderResponseDto>> GetAllAsync(CancellationToken ct = default)
+        public async Task<IEnumerable<OrderResponseDto>> GetAllAsync(
+            CancellationToken ct = default)
         {
             var orders = await _repository.GetAllAsync(ct);
             return orders.Select(ToResponse);
         }
 
-        public async Task<OrderResponseDto> UpdateStatusAsync(Guid id,
-            UpdateOrderStatusDto dto, CancellationToken ct = default)
+        public async Task<OrderResponseDto> UpdateStatusAsync(
+            Guid id,
+            UpdateOrderStatusDto dto,
+            CancellationToken ct = default)
         {
             var order = await _repository.GetByIdAsync(id, ct)
                 ?? throw new OrderNotFoundException(id);
 
+            // store user email/name in Order entity so we can use it here
             order.UpdateStatus(dto.Status);
             await _repository.UpdateAsync(order, ct);
 
-            // Publish status changed event
             await _publisher.PublishAsync(new OrderStatusChangedEvent
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
+                UserEmail = order.UserEmail,  // ← from order entity
+                UserName = order.UserName,   // ← from order entity
                 NewStatus = dto.Status.ToString(),
                 ChangedAt = order.UpdatedAt
             }, ct);
@@ -112,7 +120,11 @@ namespace OrderService.Application.Services
             return ToResponse(order);
         }
 
-        public async Task CancelAsync(Guid id, CancellationToken ct = default)
+        public async Task CancelAsync(
+            Guid id,
+            string userEmail,
+            string userName,
+            CancellationToken ct = default)
         {
             var order = await _repository.GetByIdAsync(id, ct)
                 ?? throw new OrderNotFoundException(id);
@@ -124,6 +136,8 @@ namespace OrderService.Application.Services
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
+                UserEmail = userEmail,
+                UserName = userName,
                 CancelledAt = order.UpdatedAt
             }, ct);
         }

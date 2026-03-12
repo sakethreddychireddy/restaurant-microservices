@@ -9,6 +9,7 @@ namespace AuthService.Application
         {
             services.AddScoped<RegisterUseCase>();
             services.AddScoped<LoginUseCase>();
+            services.AddScoped<OAuthLoginUseCase>();
             return services;
         }
     }
