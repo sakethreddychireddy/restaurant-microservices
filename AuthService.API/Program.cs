@@ -24,8 +24,17 @@ builder.Services.AddDataProtection()
 
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    options.MinimumSameSitePolicy = SameSiteMode.Lax;  // ← was None
-    options.Secure = CookieSecurePolicy.None;           // ← was SameAsRequest
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+    options.Secure = CookieSecurePolicy.None;
+    options.OnAppendCookie = cookieContext =>
+    {
+        if (cookieContext.CookieName.StartsWith(".AspNetCore.Correlation") ||
+            cookieContext.CookieName.StartsWith(".AspNetCore.OAuth"))
+        {
+            cookieContext.CookieOptions.Path = "/";
+            cookieContext.CookieOptions.SameSite = SameSiteMode.Lax;
+        }
+    };
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -88,7 +97,7 @@ builder.Services.AddAuthentication(options =>
     options.CorrelationCookie.SameSite = SameSiteMode.Lax;
     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
     options.CorrelationCookie.HttpOnly = true;
-    options.CorrelationCookie.Path = "/";  // ← add this
+    options.CorrelationCookie.Path = "/";
 });
 
 builder.Services.AddAuthorization();
