@@ -4,6 +4,7 @@ using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
 using AuthService.Infrastructure;
 using AuthService.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -38,8 +39,23 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // ── JWT + OAuth ────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme; // ← OAuth needs this
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    // temporary cookie just for OAuth flow — not for app auth
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // HTTP only for now
+    options.Cookie.HttpOnly = true;
+    options.Cookie.MaxAge = TimeSpan.FromMinutes(10); // short lived
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
@@ -49,30 +65,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
-    })
-    .AddGitHub(options =>
-    {
-        options.ClientId = builder.Configuration["OAuth:GitHub:ClientId"]!;
-        options.ClientSecret = builder.Configuration["OAuth:GitHub:ClientSecret"]!;
-        options.CallbackPath = "/api/auth/github/callback";
-        options.Scope.Add("user:email");
-        options.SaveTokens = true;
-        // ← Fix for HTTP (no SSL)
-        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
-        options.CorrelationCookie.HttpOnly = true;
-    })
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
-        options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
-        options.CallbackPath = "/api/auth/google/callback";
-        options.SaveTokens = true;
-        // ← Fix for HTTP (no SSL)
-        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
-        options.CorrelationCookie.HttpOnly = true;
-    });
+    };
+})
+.AddGoogle(options =>
+{
+    options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
+    options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
+    options.CallbackPath = "/api/auth/google/callback";
+    options.SaveTokens = true;
+    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+    options.CorrelationCookie.HttpOnly = true;
+})
+.AddGitHub(options =>
+{
+    options.ClientId = builder.Configuration["OAuth:GitHub:ClientId"]!;
+    options.ClientSecret = builder.Configuration["OAuth:GitHub:ClientSecret"]!;
+    options.CallbackPath = "/api/auth/github/callback";
+    options.Scope.Add("user:email");
+    options.SaveTokens = true;
+    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+    options.CorrelationCookie.HttpOnly = true;
+});
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
