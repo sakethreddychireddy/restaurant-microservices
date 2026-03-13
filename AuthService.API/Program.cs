@@ -23,8 +23,8 @@ builder.Services.AddDataProtection()
 
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    options.MinimumSameSitePolicy = SameSiteMode.None;
-    options.Secure = CookieSecurePolicy.SameAsRequest;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;  // ← was None
+    options.Secure = CookieSecurePolicy.None;           // ← was SameAsRequest
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -50,16 +50,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
     })
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
-        options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
-        options.CallbackPath = "/api/auth/google/callback";
-        options.SaveTokens = true;
-        // Fix correlation cookie
-        options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    })
     .AddGitHub(options =>
     {
         options.ClientId = builder.Configuration["OAuth:GitHub:ClientId"]!;
@@ -67,9 +57,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.CallbackPath = "/api/auth/github/callback";
         options.Scope.Add("user:email");
         options.SaveTokens = true;
-        // Fix correlation cookie
-        options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        // ← Fix for HTTP (no SSL)
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+        options.CorrelationCookie.HttpOnly = true;
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
+        options.CallbackPath = "/api/auth/google/callback";
+        options.SaveTokens = true;
+        // ← Fix for HTTP (no SSL)
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+        options.CorrelationCookie.HttpOnly = true;
     });
 
 builder.Services.AddAuthorization();
