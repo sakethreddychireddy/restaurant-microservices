@@ -54,6 +54,7 @@ pipeline {
                 sh '''
                     # ── Auth Service env ──────────────────────────────────
                     cat > /home/saketh/publish/auth/.env << EOF
+ASPNETCORE_URLS=http://0.0.0.0:5270
 OAuth__Google__ClientId=${GOOGLE_CLIENT_ID}
 OAuth__Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
 OAuth__GitHub__ClientId=${GITHUB_CLIENT_ID}
@@ -63,12 +64,16 @@ EOF
                     echo "Auth Service credentials injected"
 
                     # ── Menu Service env ──────────────────────────────────
-                    touch /home/saketh/publish/menu/.env
-                    echo "Menu Service env ready"
+                    cat > /home/saketh/publish/menu/.env << EOF
+ASPNETCORE_URLS=http://0.0.0.0:5271
+EOF
+                    echo "Menu Service credentials injected"
 
                     # ── Order Service env ─────────────────────────────────
-                    touch /home/saketh/publish/order/.env
-                    echo "Order Service env ready"
+                    cat > /home/saketh/publish/order/.env << EOF
+ASPNETCORE_URLS=http://0.0.0.0:5272
+EOF
+                    echo "Order Service credentials injected"
                 '''
             }
         }
@@ -132,7 +137,7 @@ EOF
                 sh '''
                     sleep 3
 
-                    # Auth Service
+                    # ── Auth Service ──────────────────────────────────────
                     AUTH=$(curl -s -o /dev/null -w "%{http_code}" \
                         http://localhost:5270/api/auth/health)
                     if [ "$AUTH" = "200" ]; then
@@ -141,7 +146,7 @@ EOF
                         echo "Auth Service health check returned $AUTH"
                     fi
 
-                    # Menu Service
+                    # ── Menu Service ──────────────────────────────────────
                     MENU=$(curl -s -o /dev/null -w "%{http_code}" \
                         http://localhost:5271/api/menuitems/available)
                     if [ "$MENU" = "200" ]; then
@@ -150,7 +155,7 @@ EOF
                         echo "Menu Service health check returned $MENU"
                     fi
 
-                    # Order Service
+                    # ── Order Service ─────────────────────────────────────
                     ORDER=$(curl -s -o /dev/null -w "%{http_code}" \
                         http://localhost:5272/api/orders/health 2>/dev/null || echo "000")
                     echo "Order Service responded with $ORDER"
@@ -164,13 +169,13 @@ EOF
         success {
             echo '''
                Deployment Successful!
-               All services are live   
+               All services are live
             '''
         }
         failure {
             echo '''
-               Deployment Failed!       
-               Check logs above for details   
+               Deployment Failed!
+               Check logs above for details
             '''
         }
     }
