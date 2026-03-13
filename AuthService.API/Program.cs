@@ -5,6 +5,8 @@ using AuthService.Domain.Interfaces;
 using AuthService.Infrastructure;
 using AuthService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -15,9 +17,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// ── Fix correlation cookie behind reverse proxy ────────────────
+builder.Services.AddDataProtection()
+    .SetApplicationName("RestaurantAuthService");
+
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.MinimumSameSitePolicy = SameSiteMode.None;
+    options.Secure = CookieSecurePolicy.SameAsRequest;
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                             | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// ── JWT + OAuth ────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 
-// ── Authentication — JWT + OAuth ──────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -36,6 +56,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
         options.CallbackPath = "/api/auth/google/callback";
         options.SaveTokens = true;
+        // Fix correlation cookie
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     })
     .AddGitHub(options =>
     {
@@ -44,13 +67,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.CallbackPath = "/api/auth/github/callback";
         options.Scope.Add("user:email");
         options.SaveTokens = true;
+        // Fix correlation cookie
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger — same as before
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthService API", Version = "v1" });
@@ -78,7 +103,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS
+// ── CORS ───────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration
     .GetSection("AllowedOrigins")
     .Get<string[]>() ?? Array.Empty<string>();
@@ -93,6 +118,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// ── Middleware order matters ───────────────────────────────────
+app.UseForwardedHeaders();      // ← must be first
+app.UseCookiePolicy();          // ← before auth
 app.UseCors("AllowFrontend");
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseSwagger();
@@ -101,7 +129,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Migrate and seed
+// ── Migrate and seed ───────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
