@@ -88,6 +88,7 @@ builder.Services.AddAuthentication(options =>
     options.CorrelationCookie.SameSite = SameSiteMode.Lax;
     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
     options.CorrelationCookie.HttpOnly = true;
+    options.CorrelationCookie.Path = "/";  // ← add this
 });
 
 builder.Services.AddAuthorization();
