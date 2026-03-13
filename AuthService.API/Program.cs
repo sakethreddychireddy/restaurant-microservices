@@ -32,7 +32,7 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
             cookieContext.CookieName.StartsWith(".AspNetCore.OAuth"))
         {
             cookieContext.CookieOptions.Path = "/";
-            cookieContext.CookieOptions.SameSite = SameSiteMode.Lax;
+            cookieContext.CookieOptions.SameSite = SameSiteMode.Unspecified;
         }
     };
 });
@@ -94,7 +94,7 @@ builder.Services.AddAuthentication(options =>
     options.CallbackPath = "/api/auth/github/callback";
     options.Scope.Add("user:email");
     options.SaveTokens = true;
-    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    options.CorrelationCookie.SameSite = SameSiteMode.Unspecified;
     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
     options.CorrelationCookie.HttpOnly = true;
     options.CorrelationCookie.Path = "/";
