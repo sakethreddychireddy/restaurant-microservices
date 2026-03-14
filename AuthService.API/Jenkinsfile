@@ -1,0 +1,118 @@
+﻿pipeline {
+    agent any
+
+    environment {
+        GOOGLE_CLIENT_ID     = credentials('AUTH_GOOGLE_CLIENT_ID')
+        GOOGLE_CLIENT_SECRET = credentials('AUTH_GOOGLE_CLIENT_SECRET')
+        GITHUB_CLIENT_ID     = credentials('AUTH_GITHUB_CLIENT_ID')
+        GITHUB_CLIENT_SECRET = credentials('AUTH_GITHUB_CLIENT_SECRET')
+        FRONTEND_BASE_URL    = credentials('FRONTEND_BASE_URL')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo 'Checking out latest code...'
+                checkout scm
+            }
+        }
+
+        stage('Restore') {
+            steps {
+                echo 'Restoring dependencies...'
+                sh 'dotnet restore AuthService.API/AuthService.API.csproj'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building Auth Service...'
+                sh 'dotnet build AuthService.API/AuthService.API.csproj --no-restore --configuration Release'
+            }
+        }
+
+        stage('Publish') {
+            steps {
+                echo 'Publishing Auth Service...'
+                sh '''
+                    dotnet publish AuthService.API/AuthService.API.csproj \
+                        -c Release -o /home/saketh/publish/auth
+                '''
+            }
+        }
+
+        stage('Inject Credentials') {
+            steps {
+                echo 'Injecting credentials...'
+                sh '''
+                    cat > /home/saketh/publish/auth/.env << EOF
+ASPNETCORE_URLS=http://0.0.0.0:5270
+OAuth__Google__ClientId=${GOOGLE_CLIENT_ID}
+OAuth__Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+OAuth__GitHub__ClientId=${GITHUB_CLIENT_ID}
+OAuth__GitHub__ClientSecret=${GITHUB_CLIENT_SECRET}
+Frontend__BaseUrl=${FRONTEND_BASE_URL}
+AllowedOrigins__0=http://192.168.1.213
+AllowedOrigins__1=http://192.168.1.213:5270
+EOF
+                    echo "Auth Service credentials injected"
+                '''
+            }
+        }
+
+        stage('Stop Service') {
+            steps {
+                echo 'Stopping Auth Service...'
+                sh '''
+                    sudo systemctl stop auth-service || true
+                    sleep 3
+                    echo "Auth Service stopped"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Starting Auth Service...'
+                sh '''
+                    sudo systemctl start auth-service
+                    sleep 5
+                    if sudo systemctl is-active --quiet auth-service; then
+                        echo "Auth Service is running"
+                    else
+                        echo "Auth Service failed to start"
+                        sudo journalctl -u auth-service -n 20
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo 'Running health check...'
+                sh '''
+                    sleep 3
+                    AUTH=$(curl -s -o /dev/null -w "%{http_code}" \
+                        http://localhost:5270/api/auth/health)
+                    if [ "$AUTH" = "200" ]; then
+                        echo "Auth Service healthy"
+                    else
+                        echo "Auth Service health check returned $AUTH"
+                    fi
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'Auth Service deployment successful!'
+        }
+        failure {
+            echo 'Auth Service deployment failed! Check logs above.'
+        }
+    }
+}
