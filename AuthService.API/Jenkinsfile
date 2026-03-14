@@ -20,7 +20,7 @@
 
         stage('Restore') {
             steps {
-                echo 'Restoring dependencies  
+                echo 'Restoring dependencies...'
                 sh 'dotnet restore AuthService.API/AuthService.API.csproj'
             }
         }
@@ -35,17 +35,14 @@
         stage('Publish') {
             steps {
                 echo 'Publishing Auth Service...'
-                sh '''
-                    dotnet publish AuthService.API/AuthService.API.csproj \
-                        -c Release -o /home/saketh/publish/auth
-                '''
+                sh 'dotnet publish AuthService.API/AuthService.API.csproj -c Release -o /home/saketh/publish/auth'
             }
         }
 
         stage('Inject Credentials') {
             steps {
                 echo 'Injecting credentials...'
-                sh '''
+                sh """
                     cat > /home/saketh/publish/auth/.env << EOF
 ASPNETCORE_URLS=http://0.0.0.0:5270
 OAuth__Google__ClientId=${GOOGLE_CLIENT_ID}
@@ -56,8 +53,8 @@ Frontend__BaseUrl=${FRONTEND_BASE_URL}
 AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5270
 EOF
-                    echo "Auth Service credentials injected"
-                '''
+                    echo 'Auth Service credentials injected'
+                """
             }
         }
 
@@ -94,8 +91,7 @@ EOF
                 echo 'Running health check...'
                 sh '''
                     sleep 3
-                    AUTH=$(curl -s -o /dev/null -w "%{http_code}" \
-                        http://localhost:5270/api/auth/health)
+                    AUTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5270/api/auth/health)
                     if [ "$AUTH" = "200" ]; then
                         echo "Auth Service healthy"
                     else
