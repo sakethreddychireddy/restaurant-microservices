@@ -20,7 +20,7 @@
 
         stage('Restore') {
             steps {
-                echo 'Restoring dependencies...'
+                echo 'Restoring dependencies  
                 sh 'dotnet restore AuthService.API/AuthService.API.csproj'
             }
         }
