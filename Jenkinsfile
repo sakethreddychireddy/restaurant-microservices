@@ -1,4 +1,4 @@
-﻿pipeline {
+pipeline {
     agent any
 
     environment {
@@ -52,8 +52,7 @@
             steps {
                 echo 'Injecting environment credentials...'
                 sh """
-                    # ── Auth Service env ──────────────────────────────────
-                    cat > /home/saketh/publish/auth/.env << EOF
+                    cat > /home/saketh/publish/auth/.env << 'ENVEOF'
 ASPNETCORE_URLS=http://0.0.0.0:5270
 OAuth__Google__ClientId=${GOOGLE_CLIENT_ID}
 OAuth__Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
@@ -62,23 +61,21 @@ OAuth__GitHub__ClientSecret=${GITHUB_CLIENT_SECRET}
 Frontend__BaseUrl=${FRONTEND_BASE_URL}
 AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5270
-EOF
+ENVEOF
                     echo "Auth Service credentials injected"
 
-                    # ── Menu Service env ──────────────────────────────────
-                    cat > /home/saketh/publish/menu/.env << EOF
+                    cat > /home/saketh/publish/menu/.env << 'ENVEOF'
 ASPNETCORE_URLS=http://0.0.0.0:5271
 AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5271
-EOF
+ENVEOF
                     echo "Menu Service credentials injected"
 
-                    # ── Order Service env ─────────────────────────────────
-                    cat > /home/saketh/publish/order/.env << EOF
+                    cat > /home/saketh/publish/order/.env << 'ENVEOF'
 ASPNETCORE_URLS=http://0.0.0.0:5272
 AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5272
-EOF
+ENVEOF
                     echo "Order Service credentials injected"
                 """
             }
@@ -101,7 +98,6 @@ EOF
             steps {
                 echo 'Starting all services...'
                 sh '''
-                    # ── Auth Service ──────────────────────────────────────
                     sudo systemctl start auth-service
                     sleep 5
                     if sudo systemctl is-active --quiet auth-service; then
@@ -112,7 +108,6 @@ EOF
                         exit 1
                     fi
 
-                    # ── Menu Service ──────────────────────────────────────
                     sudo systemctl start menu-service
                     sleep 5
                     if sudo systemctl is-active --quiet menu-service; then
@@ -123,7 +118,6 @@ EOF
                         exit 1
                     fi
 
-                    # ── Order Service ─────────────────────────────────────
                     sudo systemctl start order-service
                     sleep 5
                     if sudo systemctl is-active --quiet order-service; then
@@ -143,27 +137,21 @@ EOF
                 sh '''
                     sleep 3
 
-                    # Auth Service
-                    AUTH=$(curl -s -o /dev/null -w "%{http_code}" \
-                        http://localhost:5270/api/auth/health)
+                    AUTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5270/api/auth/health)
                     if [ "$AUTH" = "200" ]; then
                         echo "Auth Service healthy"
                     else
                         echo "Auth Service health check returned $AUTH"
                     fi
 
-                    # Menu Service
-                    MENU=$(curl -s -o /dev/null -w "%{http_code}" \
-                        http://localhost:5271/api/menuitems/available)
+                    MENU=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5271/api/menuitems/available)
                     if [ "$MENU" = "200" ]; then
                         echo "Menu Service healthy"
                     else
                         echo "Menu Service health check returned $MENU"
                     fi
 
-                    # Order Service
-                    ORDER=$(curl -s -o /dev/null -w "%{http_code}" \
-                        http://localhost:5272/api/orders/health 2>/dev/null || echo "000")
+                    ORDER=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5272/api/orders/health 2>/dev/null || echo "000")
                     echo "Order Service responded with $ORDER"
                 '''
             }
