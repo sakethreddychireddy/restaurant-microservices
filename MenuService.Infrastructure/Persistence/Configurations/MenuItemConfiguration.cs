@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MenuService.Infrastructure.Persistence.Configurations
@@ -25,7 +26,7 @@ namespace MenuService.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.ImageUrl)
                 .IsRequired()
-                .HasMaxLength(10);
+                .HasColumnType("text");
 
             builder.Property(x => x.Badge)
                 .HasMaxLength(50);
