@@ -1,5 +1,4 @@
 ﻿using MenuService.Application.Interfaces;
-using MenuService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace MenuService.Infrastructure.Persistence.Repositories

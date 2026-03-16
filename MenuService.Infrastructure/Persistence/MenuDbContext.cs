@@ -1,5 +1,4 @@
-﻿using MenuService.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace MenuService.Infrastructure.Persistence
 {

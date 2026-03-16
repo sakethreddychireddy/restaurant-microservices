@@ -1,6 +1,4 @@
-﻿using MenuService.Domain.Entities;
-
-namespace MenuService.Application.Interfaces
+﻿namespace MenuService.Application.Interfaces
 {
     public interface IMenuItemRepository
     {

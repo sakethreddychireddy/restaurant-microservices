@@ -1,5 +1,4 @@
-﻿using MenuService.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MenuService.Infrastructure.Persistence.Configurations
@@ -24,7 +23,7 @@ namespace MenuService.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
-            builder.Property(x => x.Emoji)
+            builder.Property(x => x.ImageUrl)
                 .IsRequired()
                 .HasMaxLength(10);
 

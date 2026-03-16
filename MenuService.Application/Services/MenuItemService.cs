@@ -1,7 +1,6 @@
 ﻿using FluentValidation;
 using MenuService.Application.DTOs;
 using MenuService.Application.Interfaces;
-using MenuService.Domain.Entities;
 using MenuService.Domain.Exceptions;
 
 public class MenuItemService
@@ -25,7 +24,7 @@ public class MenuItemService
 
     private static MenuItemResponseDto ToResponse(MenuItem item) => new(
         item.Id, item.Name, item.Description, item.Price,
-        item.Category, item.Emoji, item.ImageUrl,
+        item.Category, item.ImageUrl,
         item.IsVegetarian, item.Badge,
         item.IsAvailable, item.CreatedAt, item.UpdatedAt
     );
@@ -36,7 +35,7 @@ public class MenuItemService
         await _createValidator.ValidateAndThrowAsync(dto, ct);
         var menuItem = MenuItem.Create(
             dto.Name, dto.Description, dto.Price,
-            dto.Category, dto.Emoji,
+            dto.Category, dto.ImageUrl,
             dto.IsVegetarian, dto.Badge);
         await _repository.AddAsync(menuItem, ct);
         return ToResponse(menuItem);
@@ -79,7 +78,7 @@ public class MenuItemService
             ?? throw new MenuItemNotFoundException(id);
         menuItem.Update(
             dto.Name, dto.Description, dto.Price,
-            dto.Category, dto.Emoji,
+            dto.Category, dto.ImageUrl,
             dto.IsVegetarian, dto.Badge, dto.IsAvailable);
         await _repository.UpdateAsync(menuItem, ct);
         return ToResponse(menuItem);

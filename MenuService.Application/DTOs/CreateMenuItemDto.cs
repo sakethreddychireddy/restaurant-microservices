@@ -5,7 +5,7 @@
         string Description,
         decimal Price,
         string Category,
-        string Emoji,
+        string ImageUrl,
         bool IsVegetarian,
         string? Badge = null
     );

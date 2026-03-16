@@ -1,10 +1,5 @@
 ﻿using FluentValidation;
 using MenuService.Application.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MenuService.Application.Validators
 {
@@ -23,7 +18,7 @@ namespace MenuService.Application.Validators
             RuleFor(x => x.Category)
                 .NotEmpty().WithMessage("Category is required.")
                 .MaximumLength(50).WithMessage("Category cannot exceed 50 characters.");
-            RuleFor(x => x.Emoji)
+            RuleFor(x => x.ImageUrl)
                 .NotEmpty().WithMessage("Emoji is required.")
                 .MaximumLength(10).WithMessage("Emoji cannot exceed 10 characters.");
             RuleFor(x => x.Badge)
