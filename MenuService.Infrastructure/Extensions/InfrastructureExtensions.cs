@@ -1,6 +1,7 @@
 ﻿using MenuService.Application.Interfaces;
 using MenuService.Infrastructure.Persistence;
 using MenuService.Infrastructure.Persistence.Repositories;
+using MenuService.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,7 @@ namespace MenuService.Infrastructure.Extensions
                 options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
             // Register repositories
             services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+            services.AddScoped<IImageStorageService, LocalImageStorageService>();
             return services;
         }
     }

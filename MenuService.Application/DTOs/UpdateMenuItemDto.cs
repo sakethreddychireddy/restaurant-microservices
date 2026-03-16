@@ -10,4 +10,5 @@
         string? Badge,
         bool? IsAvailable
     );
+    public record UpdateImageUrlDto(string ImageUrl);
 }
