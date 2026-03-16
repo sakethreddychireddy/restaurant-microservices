@@ -50,8 +50,7 @@ namespace MenuService.API.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create(
-            [FromBody] CreateMenuItemDto dto, CancellationToken ct)
+        public async Task<IActionResult> Create([FromForm] CreateMenuItemDto dto,CancellationToken ct)
         {
             var item = await menuItemService.CreateMenuItemAsync(dto, ct);
             return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);

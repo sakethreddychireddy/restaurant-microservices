@@ -29,14 +29,49 @@ public class MenuItemService
         item.IsAvailable, item.CreatedAt, item.UpdatedAt
     );
 
+    //public async Task<MenuItemResponseDto> CreateMenuItemAsync(
+    //    CreateMenuItemDto dto, CancellationToken ct = default)
+    //{
+    //    await _createValidator.ValidateAndThrowAsync(dto, ct);
+    //    var menuItem = MenuItem.Create(
+    //        dto.Name, dto.Description, dto.Price,
+    //        dto.Category, dto.ImageUrl,
+    //        dto.IsVegetarian, dto.Badge);
+    //    await _repository.AddAsync(menuItem, ct);
+    //    return ToResponse(menuItem);
+    //}
+
     public async Task<MenuItemResponseDto> CreateMenuItemAsync(
-        CreateMenuItemDto dto, CancellationToken ct = default)
+    CreateMenuItemDto dto, CancellationToken ct = default)
     {
-        await _createValidator.ValidateAndThrowAsync(dto, ct);
+        // resolve image
+        string imageUrl;
+
+        if (dto.ImageFile is not null)
+        {
+            if (dto.ImageFile.Length > 5 * 1024 * 1024)
+                throw new InvalidOperationException(
+                    "Image size cannot exceed 5MB.");
+
+            imageUrl = await _imageStorage.SaveImageAsync(
+                Guid.NewGuid(), dto.ImageFile.OpenReadStream(),
+                dto.ImageFile.ContentType, ct);
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            imageUrl = dto.ImageUrl;
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                "Image is required. Please upload a file or provide a URL.");
+        }
+
         var menuItem = MenuItem.Create(
             dto.Name, dto.Description, dto.Price,
-            dto.Category, dto.ImageUrl,
+            dto.Category, imageUrl,
             dto.IsVegetarian, dto.Badge);
+
         await _repository.AddAsync(menuItem, ct);
         return ToResponse(menuItem);
     }
