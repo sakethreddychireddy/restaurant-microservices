@@ -4,9 +4,7 @@ using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
 using AuthService.Infrastructure;
 using AuthService.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -18,25 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// ── Fix correlation cookie behind reverse proxy ────────────────
-builder.Services.AddDataProtection()
-    .SetApplicationName("RestaurantAuthService");
+// ── Memory cache for OAuth state ───────────────────────────────
+builder.Services.AddMemoryCache();
 
-builder.Services.Configure<CookiePolicyOptions>(options =>
-{
-    options.MinimumSameSitePolicy = SameSiteMode.Lax;
-    options.Secure = CookieSecurePolicy.None;
-    options.OnAppendCookie = cookieContext =>
-    {
-        if (cookieContext.CookieName.StartsWith(".AspNetCore.Correlation") ||
-            cookieContext.CookieName.StartsWith(".AspNetCore.OAuth"))
-        {
-            cookieContext.CookieOptions.Path = "/";
-            cookieContext.CookieOptions.SameSite = SameSiteMode.Unspecified;
-        }
-    };
-});
-
+// ── Forwarded headers ──────────────────────────────────────────
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
@@ -46,59 +29,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// ── JWT + OAuth ────────────────────────────────────────────────
+// ── JWT only ───────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme; // ← OAuth needs this
-})
-.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-{
-    // temporary cookie just for OAuth flow — not for app auth
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // HTTP only for now
-    options.Cookie.HttpOnly = true;
-    options.Cookie.MaxAge = TimeSpan.FromMinutes(10); // short lived
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
-    };
-})
-.AddGoogle(options =>
-{
-    options.ClientId = builder.Configuration["OAuth:Google:ClientId"]!;
-    options.ClientSecret = builder.Configuration["OAuth:Google:ClientSecret"]!;
-    options.CallbackPath = "/api/auth/google/callback";
-    options.SaveTokens = true;
-    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
-    options.CorrelationCookie.HttpOnly = true;
-})
-.AddGitHub(options =>
-{
-    options.ClientId = builder.Configuration["OAuth:GitHub:ClientId"]!;
-    options.ClientSecret = builder.Configuration["OAuth:GitHub:ClientSecret"]!;
-    options.CallbackPath = "/api/auth/github/callback";
-    options.Scope.Add("user:email");
-    options.SaveTokens = true;
-    options.CorrelationCookie.SameSite = SameSiteMode.Unspecified;
-    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
-    options.CorrelationCookie.HttpOnly = true;
-    options.CorrelationCookie.Path = "/";
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
+        };
+    });
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -146,9 +94,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ── Middleware order matters ───────────────────────────────────
-app.UseForwardedHeaders();      // ← must be first
-app.UseCookiePolicy();          // ← before auth
+// ── Middleware order ───────────────────────────────────────────
+app.UseForwardedHeaders();
 app.UseCors("AllowFrontend");
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseSwagger();
