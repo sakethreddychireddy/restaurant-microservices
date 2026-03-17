@@ -2,11 +2,14 @@ pipeline {
     agent any
 
     environment {
-        GOOGLE_CLIENT_ID     = credentials('AUTH_GOOGLE_CLIENT_ID')
-        GOOGLE_CLIENT_SECRET = credentials('AUTH_GOOGLE_CLIENT_SECRET')
-        GITHUB_CLIENT_ID     = credentials('AUTH_GITHUB_CLIENT_ID')
-        GITHUB_CLIENT_SECRET = credentials('AUTH_GITHUB_CLIENT_SECRET')
-        FRONTEND_BASE_URL    = credentials('FRONTEND_BASE_URL')
+        GOOGLE_CLIENT_ID            = credentials('AUTH_GOOGLE_CLIENT_ID')
+        GOOGLE_CLIENT_SECRET        = credentials('AUTH_GOOGLE_CLIENT_SECRET')
+        GITHUB_CLIENT_ID            = credentials('AUTH_GITHUB_CLIENT_ID')
+        GITHUB_CLIENT_SECRET        = credentials('AUTH_GITHUB_CLIENT_SECRET')
+        FRONTEND_BASE_URL           = credentials('FRONTEND_BASE_URL')
+        NOTIFICATION_EMAIL          = credentials('NOTIFICATION_EMAIL')
+        NOTIFICATION_EMAIL_PASSWORD = credentials('NOTIFICATION_EMAIL_PASSWORD')
+        NOTIFICATION_FROM_NAME      = credentials('NOTIFICATION_FROM_NAME')
     }
 
     stages {
@@ -44,6 +47,9 @@ pipeline {
 
                     dotnet publish OrderService.API/OrderService.API.csproj \
                         -c Release -o /home/saketh/publish/order
+
+                    dotnet publish NotificationService.API/NotificationService.API.csproj \
+                        -c Release -o /home/saketh/publish/notification
                 '''
             }
         }
@@ -77,6 +83,15 @@ AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5272
 ENVEOF
                     echo "Order Service credentials injected"
+
+                    cat > /home/saketh/publish/notification/.env << 'ENVEOF'
+ASPNETCORE_URLS=http://0.0.0.0:5273
+Email__FromEmail=${NOTIFICATION_EMAIL}
+Email__AppPassword=${NOTIFICATION_EMAIL_PASSWORD}
+Email__FromName=${NOTIFICATION_FROM_NAME}
+AllowedOrigins__0=http://192.168.1.213
+ENVEOF
+                    echo "Notification Service credentials injected"
                 """
             }
         }
@@ -85,9 +100,10 @@ ENVEOF
             steps {
                 echo 'Stopping running services gracefully...'
                 sh '''
-                    sudo systemctl stop auth-service  || true
-                    sudo systemctl stop menu-service  || true
-                    sudo systemctl stop order-service || true
+                    sudo systemctl stop auth-service         || true
+                    sudo systemctl stop menu-service         || true
+                    sudo systemctl stop order-service        || true
+                    sudo systemctl stop notification-service || true
                     sleep 3
                     echo "All services stopped"
                 '''
@@ -127,6 +143,16 @@ ENVEOF
                         sudo journalctl -u order-service -n 20
                         exit 1
                     fi
+
+                    sudo systemctl start notification-service
+                    sleep 5
+                    if sudo systemctl is-active --quiet notification-service; then
+                        echo "Notification Service is running"
+                    else
+                        echo "Notification Service failed to start"
+                        sudo journalctl -u notification-service -n 20
+                        exit 1
+                    fi
                 '''
             }
         }
@@ -153,6 +179,13 @@ ENVEOF
 
                     ORDER=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5272/api/orders/health 2>/dev/null || echo "000")
                     echo "Order Service responded with $ORDER"
+
+                    NOTIFICATION=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5273/api/health)
+                    if [ "$NOTIFICATION" = "200" ]; then
+                        echo "Notification Service healthy"
+                    else
+                        echo "Notification Service health check returned $NOTIFICATION"
+                    fi
                 '''
             }
         }
