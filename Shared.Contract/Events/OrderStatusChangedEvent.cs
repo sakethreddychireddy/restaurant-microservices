@@ -1,4 +1,4 @@
-﻿namespace OrderService.Application.Events
+﻿namespace Shared.Contract.Events
 {
     public class OrderStatusChangedEvent
     {

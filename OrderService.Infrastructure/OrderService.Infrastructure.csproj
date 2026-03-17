@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OrderServices.Application\OrderService.Application.csproj" />
+    <ProjectReference Include="..\Shared.Contract\Shared.Contract.csproj" />
   </ItemGroup>
 
 </Project>

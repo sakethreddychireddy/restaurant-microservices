@@ -3,7 +3,7 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.Events;
+using Shared.Contract.Events;
 
 namespace OrderService.Application.Services
 {
