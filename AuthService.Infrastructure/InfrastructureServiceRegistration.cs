@@ -20,7 +20,8 @@ namespace AuthService.Infrastructure
                 services.AddScoped<ITokenService, JwtTokenService>();
                 services.AddMemoryCache();
                 services.AddSingleton<IOAuthCodeStore, InMemoryOAuthCodeStore>();
-                return services;
+                services.AddScoped<IUserAddressRepository, UserAddressRepository>();
+            return services;
             }
     }
 }

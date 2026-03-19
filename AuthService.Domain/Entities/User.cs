@@ -7,13 +7,17 @@
         public string Email { get; private set; } = string.Empty;
         public string PasswordHash { get; private set; } = string.Empty;
         public string Role { get; private set; } = "Customer";
-        public string? OAuthProvider { get; private set; }  // "Google", "GitHub"
-        public string? OAuthProviderId { get; private set; } // provider's user id
+        public string? Phone { get; private set; }
+        public string? OAuthProvider { get; private set; }
+        public string? OAuthProviderId { get; private set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+
+        private readonly List<UserAddress> _addresses = new();
+        public IReadOnlyCollection<UserAddress> Addresses =>
+            _addresses.AsReadOnly();
 
         private User() { }
 
-        // existing method — unchanged
         public static User Create(
             string name, string email,
             string passwordHash, string role = "Customer")
@@ -32,7 +36,6 @@
             };
         }
 
-        // new method for OAuth users
         public static User CreateOAuth(
             string name, string email,
             string provider, string providerId)
@@ -44,12 +47,18 @@
                 Id = Guid.NewGuid(),
                 Name = name,
                 Email = email,
-                PasswordHash = string.Empty, // no password for OAuth users
+                PasswordHash = string.Empty,
                 Role = "Customer",
                 OAuthProvider = provider,
                 OAuthProviderId = providerId,
                 CreatedAt = DateTime.UtcNow
             };
+        }
+
+        public void UpdateProfile(string? name, string? phone) 
+        {
+            if (!string.IsNullOrWhiteSpace(name)) Name = name;
+            if (phone is not null) Phone = phone;
         }
 
         public bool IsAdmin() => Role.Equals("Admin");
