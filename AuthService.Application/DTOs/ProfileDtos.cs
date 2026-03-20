@@ -14,13 +14,28 @@
 
     public record AddressRequest(
         string Label,
-        string FullAddress,
+        string AddressLine1,
+        string City,
+        string State,
+        string ZipCode,
+        string Country,
         bool IsDefault = false);
 
     public record AddressResponse(
         Guid Id,
         string Label,
-        string FullAddress,
+        string AddressLine1,
+        string City,
+        string State,
+        string ZipCode,
+        string Country,
         bool IsDefault,
-        DateTime CreatedAt);
+        DateTime CreatedAt)
+    {
+        public string FullAddress =>
+            $"{AddressLine1}, {City}, {State} {ZipCode}, {Country}";
+
+        public string ShortAddress =>
+            $"{AddressLine1}, {City}";
+    }
 }
