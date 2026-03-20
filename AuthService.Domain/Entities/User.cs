@@ -24,13 +24,13 @@
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(name);
             ArgumentException.ThrowIfNullOrWhiteSpace(email);
-            ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+            //ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
             return new User
             {
                 Id = Guid.NewGuid(),
                 Name = name,
                 Email = email,
-                PasswordHash = passwordHash,
+                PasswordHash = passwordHash, // can be empty for OTP users
                 Role = role,
                 CreatedAt = DateTime.UtcNow
             };
