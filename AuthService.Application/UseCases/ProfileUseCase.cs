@@ -48,10 +48,7 @@ namespace AuthService.Application.UseCases
         {
             var addresses = await addressRepository
                 .GetByUserIdAsync(userId, ct);
-
-            return addresses.Select(a => new AddressResponse(
-                a.Id, a.Label, a.FullAddress,
-                a.IsDefault, a.CreatedAt));
+            return addresses.Select(ToResponse);
         }
 
         // ── Add address ────────────────────────────────────────
@@ -59,13 +56,18 @@ namespace AuthService.Application.UseCases
             Guid userId, AddressRequest request,
             CancellationToken ct = default)
         {
-            // if new address is default, unset others
             if (request.IsDefault)
                 await UnsetDefaultAddressesAsync(userId, ct);
 
             var address = UserAddress.Create(
-                userId, request.Label,
-                request.FullAddress, request.IsDefault);
+                userId,
+                request.Label,
+                request.AddressLine1,
+                request.City,
+                request.State,
+                request.ZipCode,
+                request.Country,
+                request.IsDefault);
 
             await addressRepository.AddAsync(address, ct);
             await addressRepository.SaveChangesAsync(ct);
@@ -73,10 +75,7 @@ namespace AuthService.Application.UseCases
             logger.LogInformation(
                 "Address added for user {UserId}", userId);
 
-            return new AddressResponse(
-                address.Id, address.Label,
-                address.FullAddress, address.IsDefault,
-                address.CreatedAt);
+            return ToResponse(address);
         }
 
         // ── Update address ─────────────────────────────────────
@@ -94,16 +93,20 @@ namespace AuthService.Application.UseCases
             if (request.IsDefault)
                 await UnsetDefaultAddressesAsync(userId, ct);
 
-            address.Update(request.Label, request.FullAddress);
+            address.Update(
+                request.Label,
+                request.AddressLine1,
+                request.City,
+                request.State,
+                request.ZipCode,
+                request.Country);
+
             address.SetDefault(request.IsDefault);
 
             await addressRepository.UpdateAsync(address, ct);
             await addressRepository.SaveChangesAsync(ct);
 
-            return new AddressResponse(
-                address.Id, address.Label,
-                address.FullAddress, address.IsDefault,
-                address.CreatedAt);
+            return ToResponse(address);
         }
 
         // ── Delete address ─────────────────────────────────────
@@ -119,11 +122,21 @@ namespace AuthService.Application.UseCases
 
             await addressRepository.DeleteAsync(addressId, ct);
             await addressRepository.SaveChangesAsync(ct);
-
             return true;
         }
 
         // ── Helper ─────────────────────────────────────────────
+        private static AddressResponse ToResponse(UserAddress a) => new(
+            a.Id,
+            a.Label,
+            a.AddressLine1,
+            a.City,
+            a.State,
+            a.ZipCode,
+            a.Country,
+            a.IsDefault,
+            a.CreatedAt);
+
         private async Task UnsetDefaultAddressesAsync(
             Guid userId, CancellationToken ct)
         {
