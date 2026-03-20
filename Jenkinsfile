@@ -67,6 +67,11 @@ OAuth__GitHub__ClientSecret=${GITHUB_CLIENT_SECRET}
 Frontend__BaseUrl=${FRONTEND_BASE_URL}
 AllowedOrigins__0=http://192.168.1.213
 AllowedOrigins__1=http://192.168.1.213:5270
+Email__FromEmail=${NOTIFICATION_EMAIL}
+Email__AppPassword=${NOTIFICATION_EMAIL_PASSWORD}
+Email__FromName=${NOTIFICATION_FROM_NAME}
+Email__Host=smtp.gmail.com
+Email__Port=587
 ENVEOF
                     echo "Auth Service credentials injected"
 
@@ -89,6 +94,8 @@ ASPNETCORE_URLS=http://0.0.0.0:5273
 Email__FromEmail=${NOTIFICATION_EMAIL}
 Email__AppPassword=${NOTIFICATION_EMAIL_PASSWORD}
 Email__FromName=${NOTIFICATION_FROM_NAME}
+Email__Host=smtp.gmail.com
+Email__Port=587
 AllowedOrigins__0=http://192.168.1.213
 ENVEOF
                     echo "Notification Service credentials injected"

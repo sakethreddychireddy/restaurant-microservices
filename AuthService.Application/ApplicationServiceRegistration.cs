@@ -11,6 +11,7 @@ namespace AuthService.Application
             services.AddScoped<LoginUseCase>();
             services.AddScoped<OAuthLoginUseCase>();
             services.AddScoped<ProfileUseCase>();
+            services.AddScoped<OtpUseCase>();
             return services;
         }
     }
