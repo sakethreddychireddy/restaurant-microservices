@@ -13,7 +13,7 @@ namespace AuthService.Infrastructure.Persistence
             var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
             if (!db.Users.Any())
             {
-                var admin = User.Create("Admin", "admin@ember.com", hasher.Hash("Admin123!"), "Admin");
+                var admin = User.Create("Admin", "mithila.restaurant14@gmail.com", hasher.Hash("MithilaRestaurant@14"), "Admin");
                 db.Users.Add(admin);
                 await db.SaveChangesAsync();
             }

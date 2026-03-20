@@ -1,5 +1,6 @@
 ﻿using AuthService.Domain.Interfaces;
 using AuthService.Infrastructure.Auth;
+using AuthService.Infrastructure.Email;
 using AuthService.Infrastructure.Identity;
 using AuthService.Infrastructure.Persistence;
 using AuthService.Infrastructure.Repositories;
@@ -21,6 +22,8 @@ namespace AuthService.Infrastructure
                 services.AddMemoryCache();
                 services.AddSingleton<IOAuthCodeStore, InMemoryOAuthCodeStore>();
                 services.AddScoped<IUserAddressRepository, UserAddressRepository>();
+                services.AddScoped<IEmailService, GmailEmailService>();
+                services.AddSingleton<IOtpStore, InMemoryOtpStore>();
             return services;
             }
     }

@@ -113,8 +113,8 @@ using (var scope = app.Services.CreateScope())
     if (!db.Users.Any())
     {
         db.Users.Add(User.Create(
-            "Admin", "admin@ember.com",
-            BCrypt.Net.BCrypt.HashPassword("Admin123!"), "Admin"));
+            "Admin", "mithila.restaurant14@gmail.com",
+            BCrypt.Net.BCrypt.HashPassword("MithilaRestaurant@14"), "Admin"));
         await db.SaveChangesAsync();
     }
 }

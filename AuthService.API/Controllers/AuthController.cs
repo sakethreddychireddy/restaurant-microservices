@@ -1,9 +1,9 @@
 ﻿using AuthService.Application.DTOs;
 using AuthService.Application.UseCases;
 using AuthService.Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace AuthService.API.Controllers
@@ -11,12 +11,13 @@ namespace AuthService.API.Controllers
     [Route("api/auth")]
     [ApiController]
     public class AuthController(
-        RegisterUseCase registerUseCase,
-        LoginUseCase loginUseCase,
-        OAuthLoginUseCase oAuthLoginUseCase,
-        IOAuthCodeStore codeStore,
-        IConfiguration configuration,
-        IMemoryCache cache) : ControllerBase
+    RegisterUseCase registerUseCase,
+    LoginUseCase loginUseCase,
+    OAuthLoginUseCase oAuthLoginUseCase,
+    OtpUseCase otpUseCase,             
+    IOAuthCodeStore codeStore,
+    IConfiguration configuration,
+    IMemoryCache cache) : ControllerBase
     {
         // ── Helpers ────────────────────────────────────────────────
         private string FrontendUrl =>
@@ -333,6 +334,39 @@ namespace AuthService.API.Controllers
 
             if (email is null || id is null) return null;
             return (email, name!, id);
+        }
+        // ── OTP endpoints ──────────────────────────────────────────────
+        [HttpPost("send-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendOtp(
+            [FromBody] SendOtpRequest request,
+            CancellationToken ct)
+        {
+            try
+            {
+                var result = await otpUseCase.SendOtpAsync(request, ct);
+                return Ok(ApiResponse<SendOtpResponse>.SuccessResponse(
+                    result, result.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<SendOtpResponse>.FailureResponse(
+                    ex.Message, "OTP_SEND_FAILED"));
+            }
+        }
+
+        [HttpPost("verify-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyOtp(
+            [FromBody] VerifyOtpRequest request,
+            CancellationToken ct)
+        {
+            var result = await otpUseCase.VerifyOtpAsync(request, ct);
+            return result is null
+                ? Unauthorized(ApiResponse<AuthResponse>.FailureResponse(
+                    "Invalid or expired OTP.", "INVALID_OTP"))
+                : Ok(ApiResponse<AuthResponse>.SuccessResponse(
+                    result, "Verified successfully."));
         }
     }
 }
