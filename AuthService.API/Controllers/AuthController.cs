@@ -14,7 +14,9 @@ namespace AuthService.API.Controllers
     RegisterUseCase registerUseCase,
     LoginUseCase loginUseCase,
     OAuthLoginUseCase oAuthLoginUseCase,
-    OtpUseCase otpUseCase,             
+    OtpUseCase otpUseCase,  
+    RefreshTokenUseCase refreshTokenUseCase,
+    LogoutUseCase logoutUseCase,
     IOAuthCodeStore codeStore,
     IConfiguration configuration,
     IMemoryCache cache) : ControllerBase
@@ -367,6 +369,34 @@ namespace AuthService.API.Controllers
                     "Invalid or expired OTP.", "INVALID_OTP"))
                 : Ok(ApiResponse<AuthResponse>.SuccessResponse(
                     result, "Verified successfully."));
+        }
+        // ── Refresh Token ──────────────────────────────────────────────
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh(
+            [FromBody] RefreshTokenRequest request,
+            CancellationToken ct)
+        {
+            var result = await refreshTokenUseCase
+                .ExecuteAsync(request.RefreshToken, ct);
+
+            return result is null
+                ? Unauthorized(ApiResponse<AuthResponse>.FailureResponse(
+                    "Invalid or expired refresh token.", "INVALID_REFRESH_TOKEN"))
+                : Ok(ApiResponse<AuthResponse>.SuccessResponse(
+                    result, "Token refreshed successfully."));
+        }
+
+        // ── Logout ────────────────────────────────────────────────────
+        [HttpPost("logout")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Logout(
+            [FromBody] LogoutRequest request,
+            CancellationToken ct)
+        {
+            await logoutUseCase.ExecuteAsync(request.RefreshToken, ct);
+            return Ok(ApiResponse<object>.SuccessResponse(
+                null!, "Logged out successfully."));
         }
     }
 }

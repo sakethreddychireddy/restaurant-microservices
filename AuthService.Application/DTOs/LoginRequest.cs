@@ -9,4 +9,6 @@ namespace AuthService.Application.DTOs
         [Required]
         public string Password { get; init; } = string.Empty;
     }
+    public record RefreshTokenRequest(string RefreshToken);
+    public record LogoutRequest(string RefreshToken);
 }

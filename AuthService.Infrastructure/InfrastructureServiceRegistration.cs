@@ -24,6 +24,7 @@ namespace AuthService.Infrastructure
                 services.AddScoped<IUserAddressRepository, UserAddressRepository>();
                 services.AddScoped<IEmailService, GmailEmailService>();
                 services.AddSingleton<IOtpStore, InMemoryOtpStore>();
+                services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             return services;
             }
     }
