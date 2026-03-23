@@ -7,6 +7,7 @@ namespace AuthService.Infrastructure.Persistence
     {
         public DbSet<User> Users => Set<User>();
         public DbSet<UserAddress> UsersAddresses => Set<UserAddress>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AuthDbContext).Assembly);

@@ -11,6 +11,7 @@ namespace AuthService.Application.UseCases
         IOtpStore otpStore,
         IEmailService emailService,
         ITokenService tokenService,
+        IRefreshTokenRepository refreshTokenRepository,
         ILogger<OtpUseCase> logger)
     {
         // ── Send OTP ───────────────────────────────────────────
@@ -86,7 +87,10 @@ namespace AuthService.Application.UseCases
             }
 
             var token = tokenService.GenerateToken(user);
+            var refreshToken = RefreshToken.Create(user.Id, expiryDays: 30);
 
+            await refreshTokenRepository.AddAsync(refreshToken, ct);
+            await refreshTokenRepository.SaveChangesAsync(ct);
             return new AuthResponse
             {
                 Token = token,
