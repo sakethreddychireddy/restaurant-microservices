@@ -19,6 +19,9 @@ namespace AuthService.Infrastructure.Repositories
         public async Task SaveChangesAsync(CancellationToken ct = default)
             => await _context.SaveChangesAsync(ct);
         public async Task UpdateAsync(User user, CancellationToken ct = default)
-            => await UpdateAsync(user, ct);
+        {
+            _context.Users.Update(user);
+            await Task.CompletedTask;
+        }
     }
 }
